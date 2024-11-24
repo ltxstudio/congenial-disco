@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { auth, updateProfile } from 'firebase/auth';
-import { useAuth } from '../context/AuthContext';
+import { auth, updateProfile } from 'firebase/auth'; // Firebase authentication methods
+import { useAuth } from '../context/AuthContext'; // Import useAuth hook
 
 const Profile = () => {
-  const { user } = useAuth();
-  const [displayName, setDisplayName] = useState(user.displayName || '');
-  const [photoURL, setPhotoURL] = useState(user.photoURL || '');
+  const { user } = useAuth(); // Get the user from context
+  const [displayName, setDisplayName] = useState(user?.displayName || ''); // Initialize state with user info
+  const [photoURL, setPhotoURL] = useState(user?.photoURL || ''); // Initialize photoURL with user info
 
   const handleSaveProfile = async () => {
     try {
+      // Update the user's profile in Firebase Authentication
       await updateProfile(auth.currentUser, {
         displayName,
         photoURL,
