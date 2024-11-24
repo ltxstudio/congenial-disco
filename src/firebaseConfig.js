@@ -29,16 +29,15 @@ import {
 } from 'firebase/storage';
 import { getAnalytics, logEvent } from 'firebase/analytics';
 
-// Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT_ID.firebaseio.com',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
-  measurementId: 'YOUR_MEASUREMENT_ID',
+  apiKey: "AIzaSyCOYe_BBLM6KPEqaObUfGQRax6Cp3_XNtc",
+  authDomain: "livedevchat.firebaseapp.com",
+  projectId: "livedevchat",
+  storageBucket: "livedevchat.firebasestorage.app",
+  messagingSenderId: "719459119717",
+  appId: "1:719459119717:web:194609cbd4038007e6cc8c",
+  measurementId: "G-DDGB9QY46F"
 };
 
 // Initialize Firebase
