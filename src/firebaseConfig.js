@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, updateProfile } from 'firebase/auth';
 import { getDatabase, ref, set, push, onValue } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { getAnalytics, logEvent } from 'firebase/analytics';
@@ -42,6 +42,7 @@ export {
   onAuthStateChanged,
   googleProvider,
   signInWithPopup,
+  updateProfile,  // Add updateProfile here
   logEvent,
   analytics,
 };
