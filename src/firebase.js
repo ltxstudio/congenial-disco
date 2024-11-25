@@ -3,12 +3,10 @@ import {
   getFirestore,
   collection,
   addDoc,
-  getDocs,
   onSnapshot,
   query,
   orderBy,
   serverTimestamp,
-  updateDoc,
   deleteDoc,
   doc,
 } from "firebase/firestore";
@@ -17,6 +15,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
+  onAuthStateChanged as firebaseOnAuthStateChanged, // Correct import
 } from "firebase/auth";
 import {
   getStorage,
@@ -48,6 +47,7 @@ const messagesRef = collection(db, "messages");
 const provider = new GoogleAuthProvider();
 const signInWithGoogle = () => signInWithPopup(auth, provider);
 const signOutUser = () => signOut(auth);
+const onAuthStateChanged = (callback) => firebaseOnAuthStateChanged(auth, callback); // Correctly export onAuthStateChanged
 
 // Send a text message
 const sendMessage = async (text, user, imageUrl = null, fileUrl = null) => {
@@ -102,6 +102,7 @@ export {
   auth,
   signInWithGoogle,
   signOutUser,
+  onAuthStateChanged,
   sendMessage,
   getMessages,
   uploadFile,
