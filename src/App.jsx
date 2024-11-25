@@ -1,11 +1,9 @@
-// src/App.js
-
 import React, { useState, useEffect } from 'react';
-import { sendMessage, getMessages } from './firebase';
-import { FaPaperPlane, FaSmile } from 'react-icons/fa';
+import { FaPaperPlane, FaSmile, FaGoogle } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { signInWithGoogle, signOutUser, sendMessage, getMessages, onAuthStateChanged } from './firebase';
 
 toast.configure();
 
@@ -13,9 +11,15 @@ function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // Fetch messages when the component mounts
+    // Set up listener for authentication state
+    onAuthStateChanged((user) => {
+      setUser(user);
+    });
+
+    // Fetch messages from Firestore
     const fetchMessages = async () => {
       setLoading(true);
       const fetchedMessages = await getMessages();
@@ -26,16 +30,34 @@ function App() {
     fetchMessages();
   }, []);
 
+  // Send a new message
   const handleSend = async (e) => {
     e.preventDefault();
-    if (input.trim()) {
-      await sendMessage(input);
+    if (input.trim() && user) {
+      await sendMessage(input, user);
       setInput("");
       toast.success("Message sent!", { position: toast.POSITION.BOTTOM_RIGHT });
-      const fetchedMessages = await getMessages();
-      setMessages(fetchedMessages);
     } else {
-      toast.error("Please enter a message.", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.error("Please log in or enter a message.", { position: toast.POSITION.BOTTOM_RIGHT });
+    }
+  };
+
+  // Handle sign-in with Google
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error) {
+      toast.error("Error signing in!", { position: toast.POSITION.BOTTOM_RIGHT });
+    }
+  };
+
+  // Handle sign-out
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      toast.info("You have logged out.", { position: toast.POSITION.BOTTOM_RIGHT });
+    } catch (error) {
+      toast.error("Error logging out!", { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
@@ -47,6 +69,36 @@ function App() {
             <h2 className="text-xl font-semibold">React Chat App</h2>
           </div>
 
+          {/* Authentication */}
+          {!user ? (
+            <div className="p-4 text-center">
+              <button
+                onClick={handleSignIn}
+                className="flex items-center justify-center bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 transition-all"
+              >
+                <FaGoogle className="mr-2" /> Sign In with Google
+              </button>
+            </div>
+          ) : (
+            <div className="p-4 flex justify-between items-center bg-gray-200">
+              <div className="flex items-center">
+                <img
+                  src={user.photoURL}
+                  alt="User Avatar"
+                  className="w-8 h-8 rounded-full object-cover mr-2"
+                />
+                <span className="text-lg font-semibold">{user.displayName}</span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-gray-700 hover:text-red-500"
+              >
+                Sign Out
+              </button>
+            </div>
+          )}
+
+          {/* Chat Messages */}
           <div className="flex-1 p-4 overflow-y-auto">
             {loading ? (
               <div className="flex justify-center items-center h-full">
@@ -62,13 +114,23 @@ function App() {
                     transition={{ duration: 0.5 }}
                     className="bg-gray-200 p-3 rounded-lg shadow-sm"
                   >
-                    <p className="text-gray-800">{msg.text}</p>
+                    <div className="flex items-center space-x-2">
+                      <img
+                        src={msg.user.photoURL}
+                        alt="User Avatar"
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <span className="font-semibold">{msg.user.name}</span>
+                    </div>
+                    <p className="mt-1 text-gray-800">{msg.text}</p>
+                    <p className="mt-1 text-xs text-gray-500">{new Date(msg.timestamp.seconds * 1000).toLocaleTimeString()}</p>
                   </motion.div>
                 ))}
               </div>
             )}
           </div>
 
+          {/* Message Input */}
           <form onSubmit={handleSend} className="flex items-center p-4 bg-gray-50 border-t border-gray-200">
             <button type="button" className="mr-3 text-gray-600">
               <FaSmile size={20} />
