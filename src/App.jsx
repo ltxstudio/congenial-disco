@@ -6,9 +6,8 @@ import {
   getMessages,
   uploadFile,
   onAuthStateChanged,
-  deleteMessage,
-} from './firebase';
-import { FaPaperPlane, FaSmile, FaGoogle, FaTrash, FaEdit, FaUpload } from 'react-icons/fa';
+} from './firebase'; // Removed `deleteMessage` as it wasn't used in the component
+import { FaPaperPlane, FaSmile, FaGoogle, FaUpload } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,7 +16,7 @@ toast.configure();
 
 function App() {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [file, setFile] = useState(null);
@@ -34,7 +33,7 @@ function App() {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     });
 
-    return unsubscribe;
+    return unsubscribe; // Clean up the subscription on unmount
   }, []);
 
   const handleSend = async (e) => {
@@ -46,38 +45,38 @@ function App() {
       uploadFile(file, 'uploads', async (url) => {
         await sendMessage(input, user, url);
         setFile(null);
-        setInput("");
+        setInput('');
         setLoading(false);
-        toast.success("File sent!", { position: toast.POSITION.BOTTOM_RIGHT });
+        toast.success('File sent!', { position: toast.POSITION.BOTTOM_RIGHT });
       });
     } else {
       await sendMessage(input, user);
-      setInput("");
+      setInput('');
       setLoading(false);
-      toast.success("Message sent!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.success('Message sent!', { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
-    toast.info("File ready to send!", { position: toast.POSITION.BOTTOM_RIGHT });
+    toast.info('File ready to send!', { position: toast.POSITION.BOTTOM_RIGHT });
   };
 
   const handleSignIn = async () => {
     try {
       await signInWithGoogle();
-      toast.success("Logged in successfully!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.success('Logged in successfully!', { position: toast.POSITION.BOTTOM_RIGHT });
     } catch (error) {
-      toast.error("Login failed!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.error('Login failed!', { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
   const handleSignOut = async () => {
     try {
       await signOutUser();
-      toast.info("You have logged out.", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.info('You have logged out.', { position: toast.POSITION.BOTTOM_RIGHT });
     } catch (error) {
-      toast.error("Logout failed!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.error('Logout failed!', { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
@@ -93,7 +92,7 @@ function App() {
             onClick={toggleDarkMode}
             className={`px-3 py-1 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
           >
-            {isDarkMode ? "Light Mode" : "Dark Mode"}
+            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
           </button>
         </div>
 
@@ -141,15 +140,13 @@ function App() {
                   animate={{ opacity: 1 }}
                   className={`p-3 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-900'}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <img
-                        src={msg.user.photoURL}
-                        alt="User Avatar"
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
-                      <span className="font-semibold">{msg.user.name}</span>
-                    </div>
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src={msg.user.photoURL}
+                      alt="User Avatar"
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                    <span className="font-semibold">{msg.user.name}</span>
                   </div>
                   {msg.imageUrl && (
                     <img
