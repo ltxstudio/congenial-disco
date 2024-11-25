@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { FaPaperPlane, FaSmile, FaGoogle } from 'react-icons/fa';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  signInWithGoogle,
+  signOutUser,
+  sendMessage,
+  getMessages,
+  uploadFile,
+  onAuthStateChanged,
+  deleteMessage,
+} from './firebase';
+import { FaPaperPlane, FaSmile, FaGoogle, FaTrash, FaEdit, FaUpload } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { signInWithGoogle, signOutUser, sendMessage, getMessages, onAuthStateChanged } from './firebase';
 
 toast.configure();
 
@@ -12,108 +20,128 @@ function App() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState(null);
+  const [file, setFile] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
-    // Set up listener for authentication state
-    onAuthStateChanged((user) => {
-      setUser(user);
+    // Listen for auth changes
+    onAuthStateChanged((user) => setUser(user));
+
+    // Listen for real-time messages
+    const unsubscribe = getMessages((fetchedMessages) => {
+      setMessages(fetchedMessages);
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     });
 
-    // Fetch messages from Firestore
-    const fetchMessages = async () => {
-      setLoading(true);
-      const fetchedMessages = await getMessages();
-      setMessages(fetchedMessages);
-      setLoading(false);
-    };
-
-    fetchMessages();
+    return unsubscribe;
   }, []);
 
-  // Send a new message
   const handleSend = async (e) => {
     e.preventDefault();
-    if (input.trim() && user) {
+    if (!input.trim() && !file) return;
+    setLoading(true);
+
+    if (file) {
+      uploadFile(file, 'uploads', async (url) => {
+        await sendMessage(input, user, url);
+        setFile(null);
+        setInput("");
+        setLoading(false);
+        toast.success("File sent!", { position: toast.POSITION.BOTTOM_RIGHT });
+      });
+    } else {
       await sendMessage(input, user);
       setInput("");
+      setLoading(false);
       toast.success("Message sent!", { position: toast.POSITION.BOTTOM_RIGHT });
-    } else {
-      toast.error("Please log in or enter a message.", { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
-  // Handle sign-in with Google
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0]);
+    toast.info("File ready to send!", { position: toast.POSITION.BOTTOM_RIGHT });
+  };
+
   const handleSignIn = async () => {
     try {
       await signInWithGoogle();
+      toast.success("Logged in successfully!", { position: toast.POSITION.BOTTOM_RIGHT });
     } catch (error) {
-      toast.error("Error signing in!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.error("Login failed!", { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
-  // Handle sign-out
   const handleSignOut = async () => {
     try {
       await signOutUser();
       toast.info("You have logged out.", { position: toast.POSITION.BOTTOM_RIGHT });
     } catch (error) {
-      toast.error("Error logging out!", { position: toast.POSITION.BOTTOM_RIGHT });
+      toast.error("Logout failed!", { position: toast.POSITION.BOTTOM_RIGHT });
     }
   };
 
-  return (
-    <div className="flex justify-center items-center h-screen bg-gray-100">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="flex flex-col h-full">
-          <div className="p-4 bg-indigo-600 text-white text-center">
-            <h2 className="text-xl font-semibold">React Chat App</h2>
-          </div>
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
 
-          {/* Authentication */}
-          {!user ? (
-            <div className="p-4 text-center">
-              <button
-                onClick={handleSignIn}
-                className="flex items-center justify-center bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 transition-all"
-              >
-                <FaGoogle className="mr-2" /> Sign In with Google
-              </button>
+  return (
+    <div className={`flex justify-center items-center h-screen ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-900'}`}>
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+        {/* Header */}
+        <div className={`p-4 ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-indigo-600 text-white'} flex justify-between items-center`}>
+          <h2 className="text-xl font-semibold">React Chat App</h2>
+          <button
+            onClick={toggleDarkMode}
+            className={`px-3 py-1 rounded ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-100 hover:bg-gray-200'}`}
+          >
+            {isDarkMode ? "Light Mode" : "Dark Mode"}
+          </button>
+        </div>
+
+        {/* Authentication */}
+        {!user ? (
+          <div className="p-4 text-center">
+            <button
+              onClick={handleSignIn}
+              className="flex items-center justify-center bg-blue-500 text-white py-2 px-4 rounded-full hover:bg-blue-600 transition-all"
+            >
+              <FaGoogle className="mr-2" /> Sign In with Google
+            </button>
+          </div>
+        ) : (
+          <div className="p-4 flex justify-between items-center bg-gray-200 dark:bg-gray-700">
+            <div className="flex items-center">
+              <img
+                src={user.photoURL}
+                alt="User Avatar"
+                className="w-8 h-8 rounded-full object-cover mr-2"
+              />
+              <span className="text-lg font-semibold">{user.displayName}</span>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="text-sm text-gray-700 dark:text-gray-300 hover:text-red-500"
+            >
+              Sign Out
+            </button>
+          </div>
+        )}
+
+        {/* Chat Messages */}
+        <div className="flex-1 p-4 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center items-center h-full">
+              <span>Loading messages...</span>
             </div>
           ) : (
-            <div className="p-4 flex justify-between items-center bg-gray-200">
-              <div className="flex items-center">
-                <img
-                  src={user.photoURL}
-                  alt="User Avatar"
-                  className="w-8 h-8 rounded-full object-cover mr-2"
-                />
-                <span className="text-lg font-semibold">{user.displayName}</span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="text-sm text-gray-700 hover:text-red-500"
-              >
-                Sign Out
-              </button>
-            </div>
-          )}
-
-          {/* Chat Messages */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            {loading ? (
-              <div className="flex justify-center items-center h-full">
-                <span className="text-lg text-gray-600">Loading messages...</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {messages.map((msg, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="bg-gray-200 p-3 rounded-lg shadow-sm"
-                  >
+            <div className="space-y-4">
+              {messages.map((msg) => (
+                <motion.div
+                  key={msg.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`p-3 rounded-lg shadow-sm ${isDarkMode ? 'bg-gray-700 text-white' : 'bg-gray-200 text-gray-900'}`}
+                >
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <img
                         src={msg.user.photoURL}
@@ -122,31 +150,40 @@ function App() {
                       />
                       <span className="font-semibold">{msg.user.name}</span>
                     </div>
-                    <p className="mt-1 text-gray-800">{msg.text}</p>
-                    <p className="mt-1 text-xs text-gray-500">{new Date(msg.timestamp.seconds * 1000).toLocaleTimeString()}</p>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Message Input */}
-          <form onSubmit={handleSend} className="flex items-center p-4 bg-gray-50 border-t border-gray-200">
-            <button type="button" className="mr-3 text-gray-600">
-              <FaSmile size={20} />
-            </button>
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message"
-              className="w-full p-3 bg-gray-100 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <button type="submit" className="ml-3 bg-indigo-600 p-3 rounded-full text-white hover:bg-indigo-700">
-              <FaPaperPlane size={20} />
-            </button>
-          </form>
+                  </div>
+                  {msg.imageUrl && (
+                    <img
+                      src={msg.imageUrl}
+                      alt="Shared"
+                      className="mt-2 rounded-lg max-w-xs"
+                    />
+                  )}
+                  <p className="mt-1">{msg.text}</p>
+                  <p className="mt-1 text-xs">{new Date(msg.timestamp.seconds * 1000).toLocaleTimeString()}</p>
+                </motion.div>
+              ))}
+              <div ref={chatEndRef}></div>
+            </div>
+          )}
         </div>
+
+        {/* Input */}
+        <form onSubmit={handleSend} className="flex items-center p-4 bg-gray-50 border-t">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type a message"
+            className="w-full p-3 bg-gray-100 dark:bg-gray-800 rounded-lg border dark:border-gray-600"
+          />
+          <label>
+            <FaUpload className="ml-3 cursor-pointer" />
+            <input type="file" onChange={handleFileChange} className="hidden" />
+          </label>
+          <button type="submit" className="ml-3 bg-indigo-600 p-3 rounded-full text-white hover:bg-indigo-700">
+            <FaPaperPlane />
+          </button>
+        </form>
       </div>
     </div>
   );
