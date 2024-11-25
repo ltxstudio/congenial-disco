@@ -1,64 +1,109 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, onSnapshot } from 'firebase/firestore';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  onSnapshot,
+  query,
+  orderBy,
+  serverTimestamp,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+} from "firebase/auth";
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+} from "firebase/storage";
 
-// Firebase configuration (replace with your own Firebase config)
+// Firebase config
 const firebaseConfig = {
   apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  authDomain: "YOUR_AUTH_DOMAIN",
   projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  storageBucket: "YOUR_STORAGE_BUCKET",
   messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  appId: "YOUR_APP_ID",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
+const storage = getStorage(app);
 
 // Firestore references
-const messagesRef = collection(db, 'messages');
+const messagesRef = collection(db, "messages");
 
-// Firebase functions
-const sendMessage = async (text, user) => {
-  try {
-    await addDoc(messagesRef, {
-      text,
-      timestamp: new Date(),
-      user: {
-        name: user.displayName,
-        photoURL: user.photoURL,
-        uid: user.uid,
-      },
-    });
-  } catch (e) {
-    console.error("Error adding message: ", e);
-  }
-};
+// Authentication
+const provider = new GoogleAuthProvider();
+const signInWithGoogle = () => signInWithPopup(auth, provider);
+const signOutUser = () => signOut(auth);
 
-const getMessages = async () => {
-  const q = query(messagesRef, orderBy("timestamp"), limit(10));
-  const querySnapshot = await getDocs(q);
-  const messages = [];
-  querySnapshot.forEach((doc) => {
-    messages.push(doc.data());
+// Send a text message
+const sendMessage = async (text, user, imageUrl = null, fileUrl = null) => {
+  await addDoc(messagesRef, {
+    text,
+    timestamp: serverTimestamp(),
+    user: {
+      name: user.displayName,
+      photoURL: user.photoURL,
+      uid: user.uid,
+    },
+    imageUrl,
+    fileUrl,
   });
-  return messages;
 };
 
-// Firebase Authentication
-const signInWithGoogle = () => {
-  return signInWithPopup(auth, provider);
+// Get messages in real-time
+const getMessages = (callback) => {
+  const q = query(messagesRef, orderBy("timestamp"));
+  return onSnapshot(q, (snapshot) => {
+    const messages = [];
+    snapshot.forEach((doc) => {
+      messages.push({ id: doc.id, ...doc.data() });
+    });
+    callback(messages);
+  });
 };
 
-const signOutUser = () => {
-  return signOut(auth);
+// Upload image or file to Firebase Storage
+const uploadFile = (file, path, callback) => {
+  const storageRef = ref(storage, `${path}/${file.name}`);
+  const uploadTask = uploadBytesResumable(storageRef, file);
+
+  uploadTask.on(
+    "state_changed",
+    null,
+    (error) => console.error("Upload failed:", error),
+    async () => {
+      const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+      callback(downloadURL);
+    }
+  );
 };
 
-const onAuthStateChanged = (callback) => {
-  return auth.onAuthStateChanged(callback);
+// Delete a message
+const deleteMessage = async (messageId) => {
+  const messageDoc = doc(db, "messages", messageId);
+  await deleteDoc(messageDoc);
 };
 
-export { sendMessage, getMessages, signInWithGoogle, signOutUser, onAuthStateChanged };
+export {
+  auth,
+  signInWithGoogle,
+  signOutUser,
+  sendMessage,
+  getMessages,
+  uploadFile,
+  deleteMessage,
+};
